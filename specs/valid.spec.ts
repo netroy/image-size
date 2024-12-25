@@ -6,7 +6,7 @@ import { sync as globSync } from 'glob'
 
 import { detector } from '../lib/detector'
 import type { ISizeCalculationResult } from '../lib/types/interface'
-import { imageSizeFileAsync } from './test-helpers'
+import { imageSizeFromFile } from '../lib/fromFile'
 
 const sizes: Record<string, ISizeCalculationResult> = {
   default: {
@@ -154,7 +154,7 @@ describe('Valid images', () => {
 
     describe(type, () => {
       it(file, async () => {
-        const dimensions = await imageSizeFileAsync(file)
+        const dimensions = await imageSizeFromFile(file)
 
         const expected = sizes[file as keyof typeof sizes] || sizes.default
         assert.equal(dimensions.width, expected.width)

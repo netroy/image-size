@@ -33,45 +33,14 @@ interface TIFFInfo extends ISize {
 }
 
 // Read IFD (image-file-directory) into a buffer
-function readIFD(
-  input: Uint8Array,
-  filepath: string,
-  { isBigEndian, isBigTiff }: TIFFFormat,
-) {
+function readIFD(input: Uint8Array, { isBigEndian, isBigTiff }: TIFFFormat) {
   const ifdOffset = isBigTiff
     ? Number(readUInt64(input, 8, isBigEndian))
     : readUInt(input, 32, 4, isBigEndian)
-
-  const bufferSize = calculateBufferSize(filepath, ifdOffset)
-  const endBuffer = readFileBuffer(filepath, ifdOffset, bufferSize)
-
   const entryCountSize = isBigTiff
     ? CONSTANTS.COUNT_SIZE.BIG
     : CONSTANTS.COUNT_SIZE.STANDARD
-  return endBuffer.slice(entryCountSize)
-}
-
-function calculateBufferSize(filepath: string, ifdOffset: number): number {
-  const defaultSize = 2048
-  const fileSize = fs.statSync(filepath).size
-  return ifdOffset + defaultSize > fileSize
-    ? fileSize - ifdOffset - 10
-    : defaultSize
-}
-
-function readFileBuffer(
-  filepath: string,
-  offset: number,
-  size: number,
-): Uint8Array {
-  const buffer = new Uint8Array(size)
-  const descriptor = fs.openSync(filepath, 'r')
-  try {
-    fs.readSync(descriptor, buffer, 0, size, offset)
-    return buffer
-  } finally {
-    fs.closeSync(descriptor)
-  }
+  return input.slice(ifdOffset + entryCountSize)
 }
 
 function readTagValue(
@@ -174,18 +143,14 @@ export const TIFF: IImage = {
     return signatures.has(signature)
   },
 
-  calculate(input, filepath) {
-    if (!filepath) {
-      throw new TypeError("Tiff doesn't support buffer")
-    }
-
+  calculate(input) {
     const format = determineFormat(input)
 
     if (format.isBigTiff) {
       validateBigTIFFHeader(input, format.isBigEndian)
     }
 
-    const ifdBuffer = readIFD(input, filepath, format)
+    const ifdBuffer = readIFD(input, format)
     const tags = extractTags(ifdBuffer, format)
 
     const info: TIFFInfo = {
